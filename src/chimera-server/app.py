@@ -475,6 +475,15 @@ def index():
     postgres_active = is_postgres_running()
     website_active = os.path.exists(os.path.join(SHARED_DIR, "website", "index.html"))
 
+    sqlite_dbs = []
+    try:
+        for entry in os.listdir(SHARED_DIR):
+            if entry.endswith(".sqlite"):
+                sqlite_dbs.append(entry)
+    except Exception:
+        pass
+    sqlite_dbs.sort(reverse=True)
+
     return render_template(
         "index.html",
         tunnel_url=tunnel_url,
@@ -484,6 +493,8 @@ def index():
         postgres_status="active" if postgres_active else "inactive",
         website_status="active" if website_active else "inactive",
         website_url="/site/" if website_active else None,
+        sqlite_dbs=sqlite_dbs,
+        local_ip=get_local_ip(),
     )
 
 
@@ -938,6 +949,15 @@ def api_status():
     website_deployed = os.path.exists(os.path.join(SHARED_DIR, "website", "index.html"))
     website_status = "active" if website_deployed else "inactive"
 
+    sqlite_dbs = []
+    try:
+        for entry in os.listdir(SHARED_DIR):
+            if entry.endswith(".sqlite"):
+                sqlite_dbs.append(entry)
+    except Exception:
+        pass
+    sqlite_dbs.sort(reverse=True)
+
     return jsonify(
         {
             "tunnel_status": tunnel_status,
@@ -952,6 +972,7 @@ def api_status():
                 "postgres": postgres_srv_status,
                 "website": website_status,
             },
+            "sqlite_dbs": sqlite_dbs,
         }
     )
 

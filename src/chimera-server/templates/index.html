@@ -235,47 +235,115 @@
             
             <div class="deploy-grid" style="display: flex; flex-direction: column; gap: 16px;">
                 <!-- PostgreSQL Card -->
-                <div class="deploy-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="background: rgba(51, 103, 145, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="database" class="icon-md" style="color: #336791;"></i>
+                <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: rgba(51, 103, 145, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="database" class="icon-md" style="color: #336791;"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">PostgreSQL Server</h4>
+                                <span id="postgres-badge" class="service-status {% if postgres_status == 'active' %}active{% else %}inactive{% endif %}" style="font-size: 0.75rem; padding: 2px 6px;">{{ postgres_status | upper }}</span>
+                            </div>
                         </div>
-                        <div>
-                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">PostgreSQL Server</h4>
-                            <span id="postgres-badge" class="service-status {% if postgres_status == 'active' %}active{% else %}inactive{% endif %}" style="font-size: 0.75rem; padding: 2px 6px;">{{ postgres_status | upper }}</span>
+                        <form action="{{ url_for('deploy_postgres') }}" method="post" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                            {% if postgres_status == 'active' %}
+                            <input type="hidden" name="action" value="stop">
+                            <button type="submit" class="action-btn danger-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Stop</button>
+                            {% else %}
+                            <input type="hidden" name="action" value="start">
+                            <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Deploy</button>
+                            {% endif %}
+                        </form>
+                    </div>
+
+                    <!-- PostgreSQL Credentials Panel -->
+                    <div id="pg-credentials" class="credentials-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; margin-top: 4px; {% if postgres_status != 'active' %}display: none;{% endif %}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary);">Connection Details</span>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" onclick="togglePgTab('uri')" id="pg-tab-uri" class="tab-btn active" style="font-size: 0.75rem; background: none; border: none; color: var(--cyan); cursor: pointer; font-weight: 600; padding: 2px 6px;">URI</button>
+                                <button type="button" onclick="togglePgTab('params')" id="pg-tab-params" class="tab-btn" style="font-size: 0.75rem; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-weight: 500; padding: 2px 6px;">Parameters</button>
+                            </div>
+                        </div>
+                        
+                        <!-- URI Content -->
+                        <div id="pg-content-uri" class="tab-content">
+                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04);">
+                                <input type="text" id="pg-uri-val" value="postgresql://postgres@{{ local_ip }}:5432/postgres" readonly style="flex-grow: 1; background: none; border: none; color: #a2e8dd; font-family: monospace; font-size: 0.75rem; outline: none;">
+                                <button type="button" onclick="copyToClipboard('pg-uri-val', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                                    <i data-lucide="copy" class="icon-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Parameters Content -->
+                        <div id="pg-content-params" class="tab-content" style="display: none;">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.75rem;">
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">HOST</div>
+                                    <div style="font-family: monospace; font-weight: 600; color: var(--text-primary);" id="pg-host-param">{{ local_ip }}</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">PORT</div>
+                                    <div style="font-family: monospace; font-weight: 600; color: var(--text-primary);">5432</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">DATABASE</div>
+                                    <div style="font-family: monospace; font-weight: 600; color: var(--text-primary);">postgres</div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">USERNAME</div>
+                                    <div style="font-family: monospace; font-weight: 600; color: var(--text-primary);">postgres</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <form action="{{ url_for('deploy_postgres') }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
-                        {% if postgres_status == 'active' %}
-                        <input type="hidden" name="action" value="stop">
-                        <button type="submit" class="action-btn danger-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Stop</button>
-                        {% else %}
-                        <input type="hidden" name="action" value="start">
-                        <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Deploy</button>
-                        {% endif %}
-                    </form>
                 </div>
 
                 <!-- SQLite Card -->
-                <div class="deploy-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="background: rgba(0, 59, 100, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="file-text" class="icon-md" style="color: #003b64;"></i>
+                <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="background: rgba(0, 59, 100, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <i data-lucide="file-text" class="icon-md" style="color: #003b64;"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">SQLite Database</h4>
+                                <span style="font-size: 0.75rem; color: var(--text-secondary);">Create instant local DB</span>
+                            </div>
                         </div>
-                        <div>
-                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">SQLite Database</h4>
-                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Create instant local DB</span>
+                        <form action="{{ url_for('deploy_sqlite') }}" method="post" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                            <button type="submit" class="action-btn secondary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Initialize</button>
+                        </form>
+                    </div>
+
+                    <!-- SQLite Active List -->
+                    <div id="sqlite-list-container" class="credentials-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; max-height: 150px; overflow-y: auto; {% if not sqlite_dbs %}display: none;{% endif %}">
+                        <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 8px;">Active DB Connections</span>
+                        <div id="sqlite-db-list" style="display: flex; flex-direction: column; gap: 8px;">
+                            {% for db in sqlite_dbs %}
+                            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);">
+                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex-grow: 1; margin-right: 8px;">
+                                    <i data-lucide="database" class="icon-xs" style="color: #003b64; flex-shrink: 0;"></i>
+                                    <span style="font-family: monospace; font-size: 0.72rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">{{ db }}</span>
+                                </div>
+                                <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                                    <input type="hidden" id="sqlite-uri-{{ loop.index }}" value="sqlite:////media/data/shared/{{ db }}">
+                                    <button type="button" onclick="copyToClipboard('sqlite-uri-{{ loop.index }}', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px 4px;">
+                                        <i data-lucide="copy" class="icon-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
-                    <form action="{{ url_for('deploy_sqlite') }}" method="post">
-                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
-                        <button type="submit" class="action-btn secondary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Initialize</button>
-                    </form>
                 </div>
 
                 <!-- Static Website Card -->
-                <div class="deploy-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <div style="background: rgba(227, 76, 38, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
                             <i data-lucide="globe" class="icon-md" style="color: #e34c26;"></i>
@@ -289,7 +357,7 @@
                             {% endif %}
                         </div>
                     </div>
-                    <form action="{{ url_for('deploy_website') }}" method="post">
+                    <form action="{{ url_for('deploy_website') }}" method="post" style="margin: 0;">
                         <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
                         <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">
                             {% if website_status == 'active' %}Redeploy{% else %}Deploy{% endif %}
@@ -324,6 +392,51 @@
         }
     }
     bindCopyAction();
+
+    // Toggle PostgreSQL credentials tabs
+    function togglePgTab(tab) {
+        const tabUri = document.getElementById('pg-tab-uri');
+        const tabParams = document.getElementById('pg-tab-params');
+        const contentUri = document.getElementById('pg-content-uri');
+        const contentParams = document.getElementById('pg-content-params');
+        
+        if (tab === 'uri') {
+            tabUri.classList.add('active');
+            tabUri.style.color = 'var(--cyan)';
+            tabUri.style.fontWeight = '600';
+            tabParams.classList.remove('active');
+            tabParams.style.color = 'var(--text-secondary)';
+            tabParams.style.fontWeight = '500';
+            contentUri.style.display = 'block';
+            contentParams.style.display = 'none';
+        } else {
+            tabParams.classList.add('active');
+            tabParams.style.color = 'var(--cyan)';
+            tabParams.style.fontWeight = '600';
+            tabUri.classList.remove('active');
+            tabUri.style.color = 'var(--text-secondary)';
+            tabUri.style.fontWeight = '500';
+            contentUri.style.display = 'none';
+            contentParams.style.display = 'block';
+        }
+    }
+
+    // Copy any input value to clipboard and show feedback icon
+    function copyToClipboard(inputId, btn) {
+        const textVal = document.getElementById(inputId).value;
+        navigator.clipboard.writeText(textVal);
+        
+        const icon = btn.querySelector('i');
+        icon.setAttribute('data-lucide', 'check');
+        icon.style.color = 'var(--emerald)';
+        lucide.createIcons();
+        
+        setTimeout(() => {
+            icon.setAttribute('data-lucide', 'copy');
+            icon.style.color = '';
+            lucide.createIcons();
+        }, 1500);
+    }
 
     // Dynamic state polling (Retrieving real interface bytes)
     function updateMetrics() {
@@ -425,6 +538,52 @@
                     btn.className = 'action-btn primary-btn';
                     btn.innerHTML = '<i data-lucide="wifi" class="icon-sm"></i> Enable Internet Access';
                 }
+
+                // Update PostgreSQL credentials card display
+                const pgCredentials = document.getElementById('pg-credentials');
+                if (pgCredentials) {
+                    if (data.local_ip) {
+                        const pgHost = document.getElementById('pg-host-param');
+                        if (pgHost) pgHost.innerText = data.local_ip;
+                        const pgUri = document.getElementById('pg-uri-val');
+                        if (pgUri) pgUri.value = `postgresql://postgres@${data.local_ip}:5432/postgres`;
+                    }
+                    if (data.services.postgres === 'active') {
+                        pgCredentials.style.display = 'block';
+                    } else {
+                        pgCredentials.style.display = 'none';
+                    }
+                }
+
+                // Update SQLite databases list
+                const sqliteContainer = document.getElementById('sqlite-list-container');
+                const sqliteDbList = document.getElementById('sqlite-db-list');
+                if (sqliteContainer && sqliteDbList) {
+                    if (data.sqlite_dbs && data.sqlite_dbs.length > 0) {
+                        sqliteContainer.style.display = 'block';
+                        let listHtml = '';
+                        data.sqlite_dbs.forEach((db, idx) => {
+                            listHtml += `
+                                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);">
+                                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex-grow: 1; margin-right: 8px;">
+                                        <i data-lucide="database" class="icon-xs" style="color: #003b64; flex-shrink: 0;"></i>
+                                        <span style="font-family: monospace; font-size: 0.72rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${db}</span>
+                                    </div>
+                                    <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                                        <input type="hidden" id="sqlite-uri-${idx + 1}" value="sqlite:////media/data/shared/${db}">
+                                        <button type="button" onclick="copyToClipboard('sqlite-uri-${idx + 1}', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px 4px;">
+                                            <i data-lucide="copy" class="icon-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        sqliteDbList.innerHTML = listHtml;
+                    } else {
+                        sqliteContainer.style.display = 'none';
+                    }
+                }
+
                 lucide.createIcons();
             });
     }

@@ -296,6 +296,7 @@ class ChimeraServerTestCase(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data["services"]["postgres"], "active")
         self.assertEqual(data["services"]["website"], "active")
+        self.assertEqual(len(data.get("sqlite_dbs", [])), 1)
 
         # 5. Deploy PostgreSQL (Stop)
         response = self.app.post(
