@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.pytest_cache/
+
+# Go & Installers
+src/installer/windows/payload/
+ChimeraStick2Disk.exe
+ChimeraStick2Disk.sh
+
+# Build Artifacts
+build/
+payload/boot/vmlinuz-lts
+payload/boot/initramfs-lts
+payload/boot/modloop-lts
+payload/efi/EFI/
+
+# Runtime Data & Temporary Configs
+data/
+*.tmp
+tempfile
+*.log

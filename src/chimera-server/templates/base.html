@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChimeraStick Dashboard</title>
+    <!-- Premium Google Fonts (Authorized in CSP Headers) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=SF+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Lucide Icons for Apple-like outline vector designs -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="glow-orb glow-1"></div>
+    <div class="glow-orb glow-2"></div>
+    
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i data-lucide="box"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-title">ChimeraStick</span>
+                    <span class="logo-subtitle">Secure Personal Server</span>
+                </div>
+            </div>
+            {% if session.get('authenticated') %}
+            <nav class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-btn {% if request.path == '/' %}active{% endif %}">
+                    <i data-lucide="layout-dashboard" class="icon-sm"></i> Dashboard
+                </a>
+                <a href="{{ url_for('files') }}" class="nav-btn {% if request.path == '/files' %}active{% endif %}">
+                    <i data-lucide="folder" class="icon-sm"></i> Files
+                </a>
+                
+                <!-- Logout CSRF Safeguard form -->
+                <form action="{{ url_for('logout') }}" method="get" style="display:inline;">
+                    <button type="submit" class="nav-btn logout-btn" style="background:none;border:none;cursor:pointer;font-family:inherit;">
+                        <i data-lucide="log-out" class="icon-sm"></i> Logout
+                    </button>
+                </form>
+            </nav>
+            {% endif %}
+        </header>
+
+        <main class="main-content">
+            {% if content_html %}
+                {{ content_html | safe }}
+            {% else %}
+                {% block content %}{% endblock %}
+            {% endif %}
+        </main>
+
+        <footer class="app-footer">
+            <p>ChimeraStick OS &bull; Ephemeral, Secure, Immutable rootfs</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

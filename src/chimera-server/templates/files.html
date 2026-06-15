@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="files-panel glass-panel">
+    <div class="panel-header files-header">
+        <div class="header-left">
+            <h3>Shared Directory Browser</h3>
+            <p class="subtitle-text">Manage your files stored on the exFAT CHIMERA_DATA partition</p>
+        </div>
+        
+        <!-- Premium Upload Trigger -->
+        <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data" class="upload-inline-form">
+            <!-- CSRF Protection -->
+            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+            <label for="file-upload" class="upload-label-btn">
+                <i data-lucide="upload-cloud" class="icon-sm"></i>
+                <span>Upload File</span>
+                <input type="file" id="file-upload" name="file" onchange="this.form.submit()">
+            </label>
+        </form>
+    </div>
+
+    <!-- Toolbar: Search and Category Filters -->
+    <div class="files-toolbar">
+        <div class="search-box-wrapper">
+            <i data-lucide="search" class="search-icon icon-xs"></i>
+            <input type="text" id="file-search" placeholder="Quick search files..." onkeyup="filterFiles()">
+        </div>
+        <div class="filter-tabs">
+            <button class="filter-tab active" onclick="filterCategory('all', this)">All Files</button>
+            <button class="filter-tab" onclick="filterCategory('images', this)">Images</button>
+            <button class="filter-tab" onclick="filterCategory('docs', this)">Documents</button>
+            <button class="filter-tab" onclick="filterCategory('other', this)">Others</button>
+        </div>
+    </div>
+
+    <!-- Storage Table -->
+    <div class="files-table-wrapper">
+        {% if items %}
+        <table class="files-table" id="files-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Size</th>
+                    <th class="actions-col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <!-- Determine file category for filters -->
+                {% set ext = item.name.split('.')[-1].lower() if '.' in item.name else '' %}
+                {% if ext in ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'] %}
+                    {% set category = 'images' %}
+                {% elif ext in ['txt', 'pdf', 'md', 'doc', 'docx', 'xls', 'xlsx', 'json', 'py', 'conf', 'ini', 'sh'] %}
+                    {% set category = 'docs' %}
+                {% else %}
+                    {% set category = 'other' %}
+                {% endif %}
+                
+                <tr class="file-row" data-category="{{ category }}" data-name="{{ item.name | lower }}">
+                    <td>
+                        <div class="file-name-cell">
+                            <span class="file-icon-wrapper {% if item.is_dir %}dir-icon-wrapper{% else %}file-icon-wrapper{% endif %}">
+                                {% if item.is_dir %}
+                                <i data-lucide="folder" class="icon-sm text-yellow"></i>
+                                {% else %}
+                                <i data-lucide="file-text" class="icon-sm text-blue"></i>
+                                {% endif %}
+                            </span>
+                            
+                            {% if not item.is_dir %}
+                            <!-- Safe JSON output escaping for JS string parameters -->
+                            <button class="file-preview-trigger" onclick="openPreview({{ item.name | tojson }}, '{{ category }}')">
+                                {{ item.name }}
+                            </button>
+                            {% else %}
+                            <span class="file-name-text">{{ item.name }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td><span class="file-size-text">{{ item.size }}</span></td>
+                    <td class="actions-col">
+                        <div class="file-actions-group">
+                            {% if not item.is_dir %}
+                            <a href="{{ url_for('download', filename=item.name) }}" class="icon-action-btn download-btn-style" title="Download file">
+                                <i data-lucide="download" class="icon-xs"></i>
+                            </a>
+                            {% endif %}
+                            <form action="{{ url_for('delete_file', filename=item.name) }}" method="post" onsubmit="return confirmDelete({{ item.name | tojson }})" class="delete-form-inline">
+                                <!-- CSRF Protection -->
+                                <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                                <button type="submit" class="icon-action-btn delete-btn-style" title="Delete file">
+                                    <i data-lucide="trash-2" class="icon-xs"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <!-- Search/Filter Empty State -->
+        <div class="empty-state d-none" id="search-empty-state">
+            <div class="empty-icon-wrapper">
+                <i data-lucide="search-code" class="icon-lg"></i>
+            </div>
+            <h4>No matching files</h4>
+            <p>Try refining your search keyword or switching file categories.</p>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon-wrapper">
+                <i data-lucide="folder-open" class="icon-lg"></i>
+            </div>
+            <h4>Directory is empty</h4>
+            <p>Upload files or drag them directly into the sharing area to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Apple-style Glassmorphic Preview Modal -->
+<div id="preview-modal" class="modal-overlay d-none">
+    <div class="modal-card glass-panel">
+        <div class="modal-header">
+            <div class="modal-title-area">
+                <i data-lucide="eye" class="icon-sm text-cyan"></i>
+                <h4 id="preview-title">File Preview</h4>
+            </div>
+            <button class="modal-close-btn" onclick="closePreview()">
+                <i data-lucide="x" class="icon-xs"></i>
+            </button>
+        </div>
+        <div class="modal-body" id="preview-body">
+            <!-- Content dynamically populated via JS -->
+            <div class="loading-spinner">
+                <i data-lucide="refresh-cw" class="icon-sm rotating"></i>
+                <span>Loading preview...</span>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <a href="#" id="preview-download-link" class="action-btn secondary-btn py-2 text-sm">
+                <i data-lucide="download" class="icon-xs"></i> Download Raw File
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function confirmDelete(fileName) {
+        return confirm(`Are you sure you want to permanently delete "${fileName}"? This action cannot be undone.`);
+    }
+
+    // Category Filter state
+    let currentCategory = 'all';
+
+    function filterCategory(cat, btn) {
+        currentCategory = cat;
+        
+        // Update tabs active state
+        document.querySelectorAll('.filter-tab').forEach(tab => tab.classList.remove('active'));
+        btn.classList.add('active');
+        
+        applyFilters();
+    }
+
+    function filterFiles() {
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const query = document.getElementById('file-search').value.toLowerCase();
+        const rows = document.querySelectorAll('.file-row');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const name = row.getAttribute('data-name');
+            const cat = row.getAttribute('data-category');
+            
+            const matchesSearch = name.includes(query);
+            const matchesCategory = (currentCategory === 'all' || cat === currentCategory);
+            
+            if (matchesSearch && matchesCategory) {
+                row.classList.remove('d-none');
+                visibleCount++;
+            } else {
+                row.classList.add('d-none');
+            }
+        });
+
+        const table = document.getElementById('files-table');
+        const emptyState = document.getElementById('search-empty-state');
+        
+        if (table) {
+            if (visibleCount === 0 && rows.length > 0) {
+                table.classList.add('d-none');
+                emptyState.classList.remove('d-none');
+            } else {
+                table.classList.remove('d-none');
+                emptyState.classList.add('d-none');
+            }
+        }
+    }
+
+    // File Preview Logic (URL-escapes path strings safely)
+    function openPreview(filename, category) {
+        const modal = document.getElementById('preview-modal');
+        const title = document.getElementById('preview-title');
+        const body = document.getElementById('preview-body');
+        const downloadLink = document.getElementById('preview-download-link');
+
+        title.textContent = filename;
+        
+        // Safely URL-encode the filename parameter to prevent injection
+        const encodedFilename = encodeURIComponent(filename);
+        const fileUrl = `/download/${encodedFilename}`;
+        
+        downloadLink.href = fileUrl;
+        
+        body.innerHTML = `
+            <div class="loading-spinner">
+                <i data-lucide="refresh-cw" class="icon-sm rotating"></i>
+                <span>Retrieving file content...</span>
+            </div>
+        `;
+        lucide.createIcons();
+        modal.classList.remove('d-none');
+
+        if (category === 'images') {
+            body.innerHTML = `
+                <div class="preview-image-container">
+                    <img src="${fileUrl}" alt="${filename}">
+                </div>
+            `;
+        } else {
+            fetch(fileUrl)
+                .then(res => {
+                    if (!res.ok) throw new Error('Cannot load file');
+                    const contentType = res.headers.get('content-type');
+                    if (contentType && (contentType.includes('octet-stream') || contentType.includes('zip') || contentType.includes('pdf'))) {
+                        return 'Binary file format cannot be rendered in text preview. Please download the file to inspect its content.';
+                    }
+                    return res.text();
+                })
+                .then(text => {
+                    const maxLength = 60000;
+                    let truncated = false;
+                    let display = text;
+                    if (text.length > maxLength) {
+                        display = text.substring(0, maxLength);
+                        truncated = true;
+                    }
+                    
+                    const codeBlock = document.createElement('pre');
+                    codeBlock.className = 'preview-code';
+                    const code = document.createElement('code');
+                    // Safe injection using DOM textContent (never raw innerHTML)
+                    code.textContent = display;
+                    codeBlock.appendChild(code);
+
+                    body.innerHTML = '';
+                    body.appendChild(codeBlock);
+                    
+                    if (truncated) {
+                        const warnDiv = document.createElement('div');
+                        warnDiv.className = 'preview-warning';
+                        warnDiv.textContent = 'File content is truncated. Download file to view entirety.';
+                        body.appendChild(warnDiv);
+                    }
+                })
+                .catch(err => {
+                    body.innerHTML = `
+                        <div class="preview-error">
+                            <i data-lucide="alert-triangle" class="icon-sm"></i>
+                            <span>Unable to render text preview for this file type. Please download the file to view.</span>
+                        </div>
+                    `;
+                    lucide.createIcons();
+                });
+        }
+    }
+
+    function closePreview() {
+        document.getElementById('preview-modal').classList.add('d-none');
+    }
+</script>
+{% endblock %}

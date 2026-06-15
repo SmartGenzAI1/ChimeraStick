@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card glass-panel">
+        <div class="auth-header">
+            <div class="auth-icon-wrapper">
+                <i data-lucide="lock" class="icon-lg"></i>
+            </div>
+            <h2>Server Authorization</h2>
+            <p>Enter your administrator password to access ChimeraStick</p>
+        </div>
+
+        {% if error %}
+        <div class="auth-error-alert">
+            <i data-lucide="alert-circle" class="icon-sm"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('login') }}" class="auth-form">
+            <!-- CSRF Token protection -->
+            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+
+            <div class="input-group">
+                <label for="password">Administrator Password</label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password" autofocus>
+                    <button type="button" id="toggle-pw" class="password-toggle-btn">
+                        <i data-lucide="eye" id="toggle-icon"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" class="submit-btn">
+                <span>Unlock Server</span>
+                <i data-lucide="arrow-right" class="icon-sm"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const passwordInput = document.getElementById('password');
+    const toggleButton = document.getElementById('toggle-pw');
+    const toggleIcon = document.getElementById('toggle-icon');
+
+    toggleButton.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        
+        if (type === 'password') {
+            toggleIcon.setAttribute('data-lucide', 'eye');
+        } else {
+            toggleIcon.setAttribute('data-lucide', 'eye-off');
+        }
+        lucide.createIcons();
+    });
+</script>
+{% endblock %}

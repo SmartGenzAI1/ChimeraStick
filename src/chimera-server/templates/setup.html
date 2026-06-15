@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card glass-panel">
+        <div class="auth-header">
+            <div class="auth-icon-wrapper setup-icon-wrapper">
+                <i data-lucide="shield-check" class="icon-lg"></i>
+            </div>
+            <h2>Initialize Server</h2>
+            <p>Establish a secure administrator password to protect your personal files and server configuration</p>
+        </div>
+
+        {% if error %}
+        <div class="auth-error-alert">
+            <i data-lucide="alert-circle" class="icon-sm"></i>
+            <span>{{ error }}</span>
+        </div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('setup') }}" class="auth-form">
+            <!-- CSRF Token protection -->
+            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+
+            <div class="input-group">
+                <label for="password">Create Password</label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="new-password" autofocus>
+                </div>
+            </div>
+            <div class="input-group">
+                <label for="confirm_password">Confirm Password</label>
+                <div class="password-input-wrapper">
+                    <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required autocomplete="new-password">
+                </div>
+            </div>
+            <button type="submit" class="submit-btn setup-btn">
+                <span>Save & Continue</span>
+                <i data-lucide="check" class="icon-sm"></i>
+            </button>
+        </form>
+        <div class="setup-notice">
+            <i data-lucide="info" class="icon-xs"></i>
+            <span>Password is salted and hashed using bcrypt on the exFAT partition. OS user credentials will sync automatically.</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

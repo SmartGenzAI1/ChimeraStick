@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="dashboard-grid">
+    <!-- LEFT COLUMN -->
+    <div class="dashboard-column">
+        <!-- Tunnel Status Panel -->
+        <div class="status-panel glass-panel mb-4">
+            <div class="panel-header">
+                <h3>Internet Gateway</h3>
+                <div id="status-indicator" class="status-badge status-{{ tunnel_status }}">
+                    <span class="status-dot"></span>
+                    <span id="status-text">{{ tunnel_status | upper }}</span>
+                </div>
+            </div>
+
+            <div class="tunnel-display">
+                <div class="tunnel-icon">
+                    <i data-lucide="globe" id="tunnel-globe-icon" class="icon-xl {% if tunnel_status == 'online' %}pulse-active{% endif %}"></i>
+                </div>
+                <div class="tunnel-details">
+                    <p class="tunnel-label">Global Access Address</p>
+                    {% if tunnel_status == 'online' and tunnel_url %}
+                    <div class="url-copy-box">
+                        <input type="text" id="tunnel-url-val" value="{{ tunnel_url }}" readonly>
+                        <button id="copy-url-btn" class="icon-btn-action" title="Copy URL">
+                            <i data-lucide="copy" class="icon-sm"></i>
+                        </button>
+                    </div>
+                    {% else %}
+                    <p class="tunnel-fallback-text" id="tunnel-fallback">
+                        {% if tunnel_status == 'connecting' %}
+                        Allocating secure Cloudflare endpoint...
+                        {% elif tunnel_status == 'error' %}
+                        Failed to allocate connection. Check logs.
+                        {% else %}
+                        Server is running in offline mode. Local access only.
+                        {% endif %}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="panel-actions">
+                <form id="tunnel-action-form" method="post" action="{% if tunnel_status == 'online' or tunnel_status == 'connecting' %}{{ url_for('disable_tunnel') }}{% else %}{{ url_for('enable_tunnel') }}{% endif %}">
+                    <!-- CSRF Protection -->
+                    <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                    <button type="submit" id="tunnel-action-btn" class="action-btn {% if tunnel_status == 'online' or tunnel_status == 'connecting' %}danger-btn{% else %}primary-btn{% endif %}">
+                        {% if tunnel_status == 'online' or tunnel_status == 'connecting' %}
+                        <i data-lucide="wifi-off" class="icon-sm"></i> Disable Internet Access
+                        {% else %}
+                        <i data-lucide="wifi" class="icon-sm"></i> Enable Internet Access
+                        {% endif %}
+                    </button>
+                </form>
+                <a href="{{ url_for('files') }}" class="action-btn secondary-btn">
+                    <i data-lucide="hard-drive" class="icon-sm"></i> Browse Files
+                </a>
+            </div>
+        </div>
+
+        <!-- Services Status Panel -->
+        <div class="services-panel glass-panel mb-4">
+            <div class="panel-header">
+                <h3>Active Services</h3>
+                <span class="refresh-indicator"><i data-lucide="activity" class="icon-xs text-cyan"></i> Monitored</span>
+            </div>
+            <div class="services-list">
+                <div class="service-item">
+                    <div class="service-meta">
+                        <i data-lucide="server" class="icon-sm text-blue"></i>
+                        <span>Nginx Reverse Proxy</span>
+                    </div>
+                    <span class="service-status active">ACTIVE</span>
+                </div>
+                <div class="service-item">
+                    <div class="service-meta">
+                        <i data-lucide="cpu" class="icon-sm text-purple"></i>
+                        <span>Waitress Python WSGI Engine</span>
+                    </div>
+                    <span class="service-status active">ACTIVE</span>
+                </div>
+                <div class="service-item">
+                    <div class="service-meta">
+                        <i data-lucide="shield" class="icon-sm text-cyan"></i>
+                        <span>Cloudflare Secure Tunnel</span>
+                    </div>
+                    <span id="service-tunnel-status" class="service-status {% if tunnel_status == 'online' %}active{% elif tunnel_status == 'connecting' %}connecting{% else %}inactive{% endif %}">
+                        {% if tunnel_status == 'online' %}ACTIVE{% elif tunnel_status == 'connecting' %}CONNECTING{% else %}INACTIVE{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Host Details Panel -->
+        <div class="host-panel glass-panel mb-4">
+            <div class="panel-header">
+                <h3>Host Environment</h3>
+                <i data-lucide="info" class="icon-xs text-secondary"></i>
+            </div>
+            <div class="host-info-grid">
+                <div class="host-info-card">
+                    <span class="host-info-label">Local IP Address</span>
+                    <span class="host-info-val" id="host-ip">127.0.0.1</span>
+                </div>
+                <div class="host-info-card">
+                    <span class="host-info-label">System Uptime</span>
+                    <span class="host-info-val" id="host-uptime">—</span>
+                </div>
+                <div class="host-info-card">
+                    <span class="host-info-label">Interface Ports</span>
+                    <span class="host-info-val">80 &rarr; 8080</span>
+                </div>
+                <div class="host-info-card">
+                    <span class="host-info-label">Base OS Kernel</span>
+                    <span class="host-info-val">Alpine v3.19</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discord Webhook Settings Panel -->
+        <div class="settings-panel glass-panel">
+            <div class="panel-header">
+                <h3>Discord Notifications</h3>
+                <i data-lucide="bell" class="icon-xs text-purple"></i>
+            </div>
+            <p class="panel-desc" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px; margin-bottom: 16px; line-height: 1.4;">
+                Broadcast the ephemeral trycloudflare URL to your Discord server whenever the gateway goes online.
+            </p>
+            <form action="{{ url_for('settings') }}" method="post">
+                <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                <div class="form-group mb-4">
+                    <label for="discord_webhook" style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500;">Webhook URL</label>
+                    <input type="url" id="discord_webhook" name="discord_webhook" value="{{ discord_webhook }}" 
+                           placeholder="https://discord.com/api/webhooks/..." 
+                           style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border-subtle); background: rgba(255, 255, 255, 0.03); color: var(--text-primary); font-size: 0.85rem; transition: border-color 0.2s;"
+                           onfocus="this.style.borderColor='var(--border-focus)'"
+                           onblur="this.style.borderColor='var(--border-subtle)'">
+                </div>
+                <button type="submit" class="action-btn primary-btn" style="width: 100%; justify-content: center; font-weight: 600;">
+                    <i data-lucide="save" class="icon-sm"></i> Save Settings
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="dashboard-column">
+        <!-- System Resource Panel -->
+        <div class="stats-panel glass-panel mb-4">
+            <div class="panel-header">
+                <h3>Server Metrics</h3>
+                <span class="refresh-indicator"><i data-lucide="refresh-cw" class="icon-xs rotating"></i> Live</span>
+            </div>
+            
+            <div class="metrics-container">
+                <!-- CPU Gauge -->
+                <div class="metric-card">
+                    <div class="metric-icon-title">
+                        <i data-lucide="cpu" class="icon-sm text-cyan"></i>
+                        <span>Processor Load</span>
+                    </div>
+                    <div class="metric-value" id="cpu-value">{{ system_info.cpu }}%</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill progress-cpu" id="cpu-bar" style="width: {{ system_info.cpu }}%"></div>
+                    </div>
+                </div>
+
+                <!-- RAM Gauge -->
+                <div class="metric-card">
+                    <div class="metric-icon-title">
+                        <i data-lucide="layers" class="icon-sm text-purple"></i>
+                        <span>Memory Allocation</span>
+                    </div>
+                    <div class="metric-value" id="ram-value">{{ system_info.ram.percent }}%</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill progress-ram" id="ram-bar" style="width: {{ system_info.ram.percent }}%"></div>
+                    </div>
+                    <div class="metric-subtext" id="ram-subtext">Used {{ system_info.ram.used_gb }} GB of {{ system_info.ram.total_gb }} GB</div>
+                </div>
+
+                <!-- Disk Gauge -->
+                <div class="metric-card">
+                    <div class="metric-icon-title">
+                        <i data-lucide="database" class="icon-sm text-emerald"></i>
+                        <span>Data Partition Storage</span>
+                    </div>
+                    <div class="metric-value" id="disk-value">{{ system_info.disk.percent }}%</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill progress-disk" id="disk-bar" style="width: {{ system_info.disk.percent }}%"></div>
+                    </div>
+                    <div class="metric-subtext" id="disk-subtext">Used {{ system_info.disk.used_gb }} GB of {{ system_info.disk.total_gb }} GB</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Activity Panel -->
+        <div class="network-panel glass-panel">
+            <div class="panel-header">
+                <h3>Network Traffic</h3>
+                <span class="refresh-indicator"><i data-lucide="arrow-left-right" class="icon-xs text-emerald"></i> Active</span>
+            </div>
+            
+            <div class="network-traffic-grid">
+                <div class="traffic-card card-rx">
+                    <div class="traffic-title">
+                        <i data-lucide="arrow-down-circle" class="icon-sm text-emerald"></i>
+                        <span>Incoming (Rx)</span>
+                    </div>
+                    <div class="traffic-value" id="traffic-rx">0.0 B/s</div>
+                </div>
+                <div class="traffic-card card-tx">
+                    <div class="traffic-title">
+                        <i data-lucide="arrow-up-circle" class="icon-sm text-cyan"></i>
+                        <span>Outgoing (Tx)</span>
+                    </div>
+                    <div class="traffic-value" id="traffic-tx">0.0 B/s</div>
+                </div>
+            </div>
+            
+            <div class="traffic-notice">
+                <i data-lucide="shield-check" class="icon-xs text-secondary"></i>
+                <span>Tunnel connection is protected with encrypted SSL wrappers.</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Copy URL functionality
+    function bindCopyAction() {
+        const copyBtn = document.getElementById('copy-url-btn');
+        if (copyBtn) {
+            copyBtn.addEventListener('click', () => {
+                const copyText = document.getElementById('tunnel-url-val');
+                copyText.select();
+                copyText.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(copyText.value);
+                
+                const icon = copyBtn.querySelector('i');
+                icon.setAttribute('data-lucide', 'check');
+                lucide.createIcons();
+                
+                setTimeout(() => {
+                    icon.setAttribute('data-lucide', 'copy');
+                    lucide.createIcons();
+                }, 2000);
+            });
+        }
+    }
+    bindCopyAction();
+
+    // Dynamic state polling (Retrieving real interface bytes)
+    function updateMetrics() {
+        fetch('{{ url_for("api_status") }}')
+            .then(res => res.json())
+            .catch(err => console.log('Polling failure:', err))
+            .then(data => {
+                if (!data || data.error) return;
+
+                // Update system resource panels
+                const cpu = data.system_info.cpu;
+                document.getElementById('cpu-value').innerText = cpu + '%';
+                document.getElementById('cpu-bar').style.width = cpu + '%';
+
+                const ram = data.system_info.ram;
+                document.getElementById('ram-value').innerText = ram.percent + '%';
+                document.getElementById('ram-bar').style.width = ram.percent + '%';
+                document.getElementById('ram-subtext').innerText = `Used ${ram.used_gb} GB of ${ram.total_gb} GB`;
+
+                const disk = data.system_info.disk;
+                document.getElementById('disk-value').innerText = disk.percent + '%';
+                document.getElementById('disk-bar').style.width = disk.percent + '%';
+                document.getElementById('disk-subtext').innerText = `Used ${disk.used_gb} GB of ${disk.total_gb} GB`;
+
+                // Update real network throughput traffic
+                document.getElementById('traffic-rx').innerText = data.system_info.network.rx_formatted;
+                document.getElementById('traffic-tx').innerText = data.system_info.network.tx_formatted;
+
+                // Update network details
+                document.getElementById('host-ip').innerText = data.local_ip;
+                document.getElementById('host-uptime').innerText = data.uptime;
+
+                // Update tunnel configuration if state changes
+                const status = data.tunnel_status;
+                const statusIndicator = document.getElementById('status-indicator');
+                const statusText = document.getElementById('status-text');
+                const globeIcon = document.getElementById('tunnel-globe-icon');
+
+                statusIndicator.className = 'status-badge status-' + status;
+                statusText.innerText = status.toUpperCase();
+
+                if (status === 'online') {
+                    globeIcon.classList.add('pulse-active');
+                } else {
+                    globeIcon.classList.remove('pulse-active');
+                }
+
+                // Services status updater
+                const tunnelService = document.getElementById('service-tunnel-status');
+                if (status === 'online') {
+                    tunnelService.className = 'service-status active';
+                    tunnelService.innerText = 'ACTIVE';
+                } else if (status === 'connecting') {
+                    tunnelService.className = 'service-status connecting';
+                    tunnelService.innerText = 'CONNECTING';
+                } else {
+                    tunnelService.className = 'service-status inactive';
+                    tunnelService.innerText = 'INACTIVE';
+                }
+
+                // URL rendering logic
+                const detailsContainer = document.querySelector('.tunnel-details');
+                if (status === 'online' && data.tunnel_url) {
+                    if (!document.getElementById('tunnel-url-val')) {
+                        detailsContainer.innerHTML = `
+                            <p class="tunnel-label">Global Access Address</p>
+                            <div class="url-copy-box">
+                                <input type="text" id="tunnel-url-val" value="${data.tunnel_url}" readonly>
+                                <button id="copy-url-btn" class="icon-btn-action" title="Copy URL">
+                                    <i data-lucide="copy" class="icon-sm"></i>
+                                </button>
+                            </div>
+                        `;
+                        lucide.createIcons();
+                        bindCopyAction();
+                    }
+                } else {
+                    let fallbackText = "Server is running in offline mode. Local access only.";
+                    if (status === 'connecting') {
+                        fallbackText = "Allocating secure Cloudflare endpoint...";
+                    } else if (status === 'error') {
+                        fallbackText = "Failed to allocate connection. Check logs.";
+                    }
+                    detailsContainer.innerHTML = `
+                        <p class="tunnel-label">Global Access Address</p>
+                        <p class="tunnel-fallback-text" id="tunnel-fallback">${fallbackText}</p>
+                    `;
+                }
+
+                // Update form button action state
+                const form = document.getElementById('tunnel-action-form');
+                const btn = document.getElementById('tunnel-action-btn');
+                if (status === 'online' || status === 'connecting') {
+                    form.action = '{{ url_for("disable_tunnel") }}';
+                    btn.className = 'action-btn danger-btn';
+                    btn.innerHTML = '<i data-lucide="wifi-off" class="icon-sm"></i> Disable Internet Access';
+                } else {
+                    form.action = '{{ url_for("enable_tunnel") }}';
+                    btn.className = 'action-btn primary-btn';
+                    btn.innerHTML = '<i data-lucide="wifi" class="icon-sm"></i> Enable Internet Access';
+                }
+                lucide.createIcons();
+            });
+    }
+
+    // Poll status metrics every 3 seconds
+    setInterval(updateMetrics, 3000);
+    
+    // Initial run
+    setTimeout(updateMetrics, 500);
+</script>
+{% endblock %}
