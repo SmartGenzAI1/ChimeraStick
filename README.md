@@ -132,6 +132,18 @@ Before installing, back up any files on your USB pendrive. Partitioning erases a
 6. **Accessing Globally**: You can now access your server's web dashboard and file manager from anywhere in the world using this URL over an encrypted HTTPS connection.
 7. **File Sharing**: Go to the **Browse Files** section. You can download and delete files, or drag-and-drop new files to upload them directly. All uploaded data is safely written to the physical exFAT partition on the USB drive.
 
+### 5.3 One-Click Deployment Hub
+The dashboard features a **One-Click Deployment Hub** to spin up databases and websites on your server:
+
+*   **PostgreSQL Server**:
+    - Click **Deploy** to install (via Alpine `apk`), initialize, and run a local PostgreSQL database on port `5432`.
+    - All database data is written to Partition 3 (`/media/data/postgres/data/`) to remain persistent across reboots. Click **Stop** to shut down the server.
+*   **SQLite Database**:
+    - Click **Initialize** to instantly create a new `.sqlite` database file (e.g., `database_<timestamp>.sqlite`) inside your shared directory, pre-configured with a demo table.
+*   **Static Website Hosting**:
+    - Click **Deploy** to instantly create a web server directory (`shared/website/`) with a boilerplate template.
+    - Your website is served directly by Nginx (bypassing admin authentication for public access) at `http://<server-ip>/site/` and globally under `https://<tunnel-url>/site/`. You can customize this site in real-time by editing files inside the `website/` directory.
+
 ---
 
 ## 6. Security and Design Specs

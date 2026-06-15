@@ -259,6 +259,55 @@ class ChimeraServerTestCase(unittest.TestCase):
             cfg = json.load(f)
         self.assertIsNone(cfg.get("discord_webhook"))
 
+    def test_deploy_routes(self):
+        # 1. Unauthenticated deploy requests without CSRF should fail with 400
+        response = self.app.post("/deploy/sqlite")
+        self.assertEqual(response.status_code, 400)
+
+        # Authenticate session
+        with self.app.session_transaction() as sess:
+            sess["authenticated"] = True
+            sess["csrf_token"] = "token123"
+
+        # 2. Deploy SQLite
+        response = self.app.post("/deploy/sqlite", data={"csrf_token": "token123"})
+        self.assertEqual(response.status_code, 302)
+
+        # Verify a .sqlite file was created in shared directory
+        files = os.listdir(self.shared_dir)
+        sqlite_files = [f for f in files if f.endswith(".sqlite")]
+        self.assertEqual(len(sqlite_files), 1)
+
+        # 3. Deploy Website
+        response = self.app.post("/deploy/website", data={"csrf_token": "token123"})
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            os.path.exists(os.path.join(self.shared_dir, "website", "index.html"))
+        )
+
+        # 4. Deploy PostgreSQL (Start)
+        response = self.app.post(
+            "/deploy/postgres", data={"action": "start", "csrf_token": "token123"}
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Check pg status via API
+        response = self.app.get("/api/status")
+        data = json.loads(response.data)
+        self.assertEqual(data["services"]["postgres"], "active")
+        self.assertEqual(data["services"]["website"], "active")
+
+        # 5. Deploy PostgreSQL (Stop)
+        response = self.app.post(
+            "/deploy/postgres", data={"action": "stop", "csrf_token": "token123"}
+        )
+        self.assertEqual(response.status_code, 302)
+
+        # Check pg status via API
+        response = self.app.get("/api/status")
+        data = json.loads(response.data)
+        self.assertEqual(data["services"]["postgres"], "inactive")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -194,7 +194,7 @@
         </div>
 
         <!-- Network Activity Panel -->
-        <div class="network-panel glass-panel">
+        <div class="network-panel glass-panel mb-4">
             <div class="panel-header">
                 <h3>Network Traffic</h3>
                 <span class="refresh-indicator"><i data-lucide="arrow-left-right" class="icon-xs text-emerald"></i> Active</span>
@@ -220,6 +220,82 @@
             <div class="traffic-notice">
                 <i data-lucide="shield-check" class="icon-xs text-secondary"></i>
                 <span>Tunnel connection is protected with encrypted SSL wrappers.</span>
+            </div>
+        </div>
+
+        <!-- One-Click Deployment Hub Panel -->
+        <div class="deployment-panel glass-panel">
+            <div class="panel-header">
+                <h3>One-Click Deployment Hub</h3>
+                <span class="refresh-indicator"><i data-lucide="rocket" class="icon-xs text-cyan"></i> Services</span>
+            </div>
+            <p class="panel-desc" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px; margin-bottom: 20px; line-height: 1.4;">
+                Deploy pre-configured databases and web hosting directly on your server.
+            </p>
+            
+            <div class="deploy-grid" style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- PostgreSQL Card -->
+                <div class="deploy-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="background: rgba(51, 103, 145, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="database" class="icon-md" style="color: #336791;"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">PostgreSQL Server</h4>
+                            <span id="postgres-badge" class="service-status {% if postgres_status == 'active' %}active{% else %}inactive{% endif %}" style="font-size: 0.75rem; padding: 2px 6px;">{{ postgres_status | upper }}</span>
+                        </div>
+                    </div>
+                    <form action="{{ url_for('deploy_postgres') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                        {% if postgres_status == 'active' %}
+                        <input type="hidden" name="action" value="stop">
+                        <button type="submit" class="action-btn danger-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Stop</button>
+                        {% else %}
+                        <input type="hidden" name="action" value="start">
+                        <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Deploy</button>
+                        {% endif %}
+                    </form>
+                </div>
+
+                <!-- SQLite Card -->
+                <div class="deploy-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="background: rgba(0, 59, 100, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="file-text" class="icon-md" style="color: #003b64;"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">SQLite Database</h4>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">Create instant local DB</span>
+                        </div>
+                    </div>
+                    <form action="{{ url_for('deploy_sqlite') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                        <button type="submit" class="action-btn secondary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">Initialize</button>
+                    </form>
+                </div>
+
+                <!-- Static Website Card -->
+                <div class="deploy-card" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div style="background: rgba(227, 76, 38, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="globe" class="icon-md" style="color: #e34c26;"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">Static Website</h4>
+                            {% if website_status == 'active' %}
+                            <a href="/site/" target="_blank" style="font-size: 0.75rem; color: var(--cyan); text-decoration: none; display: block; font-weight: 500;">Open Website &rarr;</a>
+                            {% else %}
+                            <span class="service-status inactive" style="font-size: 0.75rem; padding: 2px 6px;">INACTIVE</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <form action="{{ url_for('deploy_website') }}" method="post">
+                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                        <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">
+                            {% if website_status == 'active' %}Redeploy{% else %}Deploy{% endif %}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>

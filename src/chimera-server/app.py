@@ -5,6 +5,8 @@ import re
 import time
 import shutil
 import threading
+import socket
+import sqlite3
 from flask import (
     Flask,
     render_template,
@@ -48,6 +50,23 @@ tunnel_process = None
 tunnel_status = "offline"  # offline, connecting, online, error
 tunnel_url = None
 tunnel_lock = threading.Lock()
+
+# PostgreSQL mock state
+mock_postgres_running = False
+
+
+def is_postgres_running():
+    if os.name == "nt" or app.config.get("TESTING"):
+        return mock_postgres_running
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(0.2)
+    try:
+        s.connect(("127.0.0.1", 5432))
+        s.close()
+        return True
+    except Exception:
+        return False
+
 
 system_info = {
     "cpu": 0.0,
@@ -453,12 +472,18 @@ def index():
     if not session.get("authenticated"):
         return redirect(url_for("login"))
 
+    postgres_active = is_postgres_running()
+    website_active = os.path.exists(os.path.join(SHARED_DIR, "website", "index.html"))
+
     return render_template(
         "index.html",
         tunnel_url=tunnel_url,
         tunnel_status=tunnel_status,
         system_info=system_info,
         discord_webhook=config.get("discord_webhook") or "",
+        postgres_status="active" if postgres_active else "inactive",
+        website_status="active" if website_active else "inactive",
+        website_url="/site/" if website_active else None,
     )
 
 
@@ -483,6 +508,215 @@ def settings():
     cfg = load_config()
     cfg["discord_webhook"] = webhook_url if webhook_url else None
     save_config(cfg)
+    return redirect(url_for("index"))
+
+
+@app.route("/deploy/postgres", methods=["POST"])
+def deploy_postgres():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    global mock_postgres_running
+    action = request.form.get("action")
+
+    if os.name == "nt" or app.config.get("TESTING"):
+        if action == "start":
+            mock_postgres_running = True
+        else:
+            mock_postgres_running = False
+        return redirect(url_for("index"))
+
+    if action == "start":
+        try:
+            if shutil.which("pg_ctl") is None:
+                subprocess.run(["apk", "add", "--no-cache", "postgresql"], check=True)
+        except Exception as e:
+            return (
+                render_template(
+                    "base.html",
+                    content_html=f"<div class='glass-panel' style='text-align:center;'><h4>Deployment Failed</h4><p>Failed to install PostgreSQL package: {e}</p><a href='/' class='action-btn secondary-btn'>Return to Dashboard</a></div>",
+                ),
+                500,
+            )
+
+        data_dir = "/media/data/postgres/data"
+        log_file = "/media/data/postgres/postgres.log"
+        os.makedirs(os.path.dirname(data_dir), exist_ok=True)
+
+        try:
+            subprocess.run(
+                ["chown", "-R", "postgres:postgres", "/media/data/postgres"],
+                check=True,
+            )
+        except Exception:
+            pass
+
+        if not os.path.exists(os.path.join(data_dir, "PG_VERSION")):
+            try:
+                subprocess.run(
+                    ["su", "-", "postgres", "-c", f"pg_ctl initdb -D {data_dir}"],
+                    check=True,
+                )
+            except Exception as e:
+                return (
+                    render_template(
+                        "base.html",
+                        content_html=f"<div class='glass-panel' style='text-align:center;'><h4>Deployment Failed</h4><p>Failed to initialize PostgreSQL database cluster: {e}</p><a href='/' class='action-btn secondary-btn'>Return to Dashboard</a></div>",
+                    ),
+                    500,
+                )
+
+        try:
+            subprocess.run(
+                [
+                    "su",
+                    "-",
+                    "postgres",
+                    "-c",
+                    f"pg_ctl start -D {data_dir} -l {log_file} -o '-p 5432'",
+                ],
+                check=True,
+            )
+        except Exception as e:
+            return (
+                render_template(
+                    "base.html",
+                    content_html=f"<div class='glass-panel' style='text-align:center;'><h4>Deployment Failed</h4><p>Failed to start PostgreSQL daemon: {e}</p><a href='/' class='action-btn secondary-btn'>Return to Dashboard</a></div>",
+                ),
+                500,
+            )
+    else:
+        data_dir = "/media/data/postgres/data"
+        try:
+            subprocess.run(
+                ["su", "-", "postgres", "-c", f"pg_ctl stop -D {data_dir}"], check=True
+            )
+        except Exception as e:
+            print(f"Error stopping postgres: {e}")
+
+    return redirect(url_for("index"))
+
+
+@app.route("/deploy/sqlite", methods=["POST"])
+def deploy_sqlite():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        db_filename = f"database_{int(time.time())}.sqlite"
+        db_path = os.path.join(SHARED_DIR, db_filename)
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT)"
+        )
+        cursor.execute(
+            "INSERT INTO users (name, email) VALUES ('Administrator', 'admin@chimerastick.local')"
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        return (
+            render_template(
+                "base.html",
+                content_html=f"<div class='glass-panel' style='text-align:center;'><h4>Deployment Failed</h4><p>Failed to create SQLite database: {e}</p><a href='/' class='action-btn secondary-btn'>Return to Dashboard</a></div>",
+            ),
+            500,
+        )
+
+    return redirect(url_for("files"))
+
+
+@app.route("/deploy/website", methods=["POST"])
+def deploy_website():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    website_dir = os.path.join(SHARED_DIR, "website")
+    os.makedirs(website_dir, exist_ok=True)
+    index_file = os.path.join(website_dir, "index.html")
+
+    if not os.path.exists(index_file):
+        try:
+            template_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My ChimeraStick Site</title>
+    <style>
+        body {
+            background-color: #060608;
+            color: #f4f4f6;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .card {
+            background: rgba(18, 18, 24, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 24px;
+            padding: 40px 60px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #00f2fe, #bf5af2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p {
+            color: #8e8e93;
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        .btn {
+            display: inline-block;
+            text-decoration: none;
+            background: #00f2fe;
+            color: #060608;
+            font-weight: 600;
+            padding: 12px 28px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+            transition: all 0.2s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>ChimeraStick Website 🚀</h1>
+        <p>Your one-click static website is now live globally on the internet!</p>
+        <p style="font-size: 0.9rem; color: #48484a;">Customize this by modifying <code>shared/website/index.html</code> via the file browser.</p>
+        <a href="/" class="btn">Return to Control Center</a>
+    </div>
+</body>
+</html>"""
+            with open(index_file, "w", encoding="utf-8") as f:
+                f.write(template_content)
+        except Exception as e:
+            return (
+                render_template(
+                    "base.html",
+                    content_html=f"<div class='glass-panel' style='text-align:center;'><h4>Deployment Failed</h4><p>Failed to create index.html: {e}</p><a href='/' class='action-btn secondary-btn'>Return to Dashboard</a></div>",
+                ),
+                500,
+            )
+
     return redirect(url_for("index"))
 
 
@@ -700,6 +934,10 @@ def api_status():
     elif tunnel_status == "connecting":
         tunnel_srv_status = "connecting"
 
+    postgres_srv_status = "active" if is_postgres_running() else "inactive"
+    website_deployed = os.path.exists(os.path.join(SHARED_DIR, "website", "index.html"))
+    website_status = "active" if website_deployed else "inactive"
+
     return jsonify(
         {
             "tunnel_status": tunnel_status,
@@ -707,7 +945,13 @@ def api_status():
             "system_info": system_info,
             "local_ip": get_local_ip(),
             "uptime": get_system_uptime(),
-            "services": {"web": "active", "app": "active", "tunnel": tunnel_srv_status},
+            "services": {
+                "web": "active",
+                "app": "active",
+                "tunnel": tunnel_srv_status,
+                "postgres": postgres_srv_status,
+                "website": website_status,
+            },
         }
     )
 
