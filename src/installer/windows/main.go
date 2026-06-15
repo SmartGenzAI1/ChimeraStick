@@ -151,7 +151,10 @@ func main() {
 }
 
 func amAdmin() bool {
-	return windows.IsUserAnAdmin()
+	shell32 := windows.NewLazySystemDLL("shell32.dll")
+	isUserAnAdmin := shell32.NewProc("IsUserAnAdmin")
+	ret, _, _ := isUserAnAdmin.Call()
+	return ret != 0
 }
 
 func runMeElevated() {
