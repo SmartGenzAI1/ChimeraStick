@@ -604,7 +604,6 @@ def enable_tunnel():
     if not session.get('authenticated'):
         return redirect(url_for('login'))
         
-    global tunnel_status
     if tunnel_status not in ["connecting", "online"]:
         t = threading.Thread(target=tunnel_worker, daemon=True)
         t.start()
