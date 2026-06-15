@@ -124,9 +124,13 @@ Before installing, back up any files on your USB pendrive. Partitioning erases a
 1. From any device on the same local network (such as your phone or main PC), open a web browser and navigate to the server's local IP address (e.g., `http://192.168.1.100`).
 2. **First Run Setup**: The system will automatically detect that no password has been established and show the **Initialize Server** wizard. Create a strong administrator password.
 3. **Dashboard**: Once logged in, you will access the sleek, dark glassmorphic control center featuring live performance metrics (CPU, Memory, Disk usage) updated in real-time.
-4. **Enabling Remote Access**: Click **Enable Internet Access** under the connection panel. The server will spin up a secure, encrypted Cloudflare tunnel and generate a public HTTPS URL (e.g. `https://your-random-subdomain.trycloudflare.com`).
-5. **Accessing Globally**: You can now access your server's web dashboard and file manager from anywhere in the world using this URL over an encrypted HTTPS connection. Emojis are replaced by Apple-like outline Lucide vectors for a clean user interface.
-6. **File Sharing**: Go to the **Browse Files** section. You can download and delete files, or drag-and-drop new files to upload them directly. All uploaded data is safely written to the physical exFAT partition on the USB drive.
+4. **Discord Webhook Setup (Optional)**:
+   - Locate the **Discord Notifications** card in the left column.
+   - Paste a Discord Channel Webhook URL and click **Save Settings**.
+   - Whenever the server starts up or the tunnel goes online, the server will automatically post its new ephemeral public access link, local IP, and system uptime to your Discord channel. This removes the need for a custom domain!
+5. **Enabling Remote Access**: Click **Enable Internet Access** under the connection panel. The server will spin up a secure, encrypted Cloudflare tunnel and generate a public HTTPS URL (e.g., `https://your-random-subdomain.trycloudflare.com`).
+6. **Accessing Globally**: You can now access your server's web dashboard and file manager from anywhere in the world using this URL over an encrypted HTTPS connection.
+7. **File Sharing**: Go to the **Browse Files** section. You can download and delete files, or drag-and-drop new files to upload them directly. All uploaded data is safely written to the physical exFAT partition on the USB drive.
 
 ---
 

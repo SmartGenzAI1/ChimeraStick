@@ -37,8 +37,11 @@ SHARED_DIR = os.path.join(DATA_DIR, "shared")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
 
 # Ensure directories exist
-os.makedirs(CONFIG_DIR, exist_ok=True)
-os.makedirs(SHARED_DIR, exist_ok=True)
+try:
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    os.makedirs(SHARED_DIR, exist_ok=True)
+except Exception as e:
+    print(f"Warning: Directory creation deferred or failed: {e}")
 
 # Global states
 tunnel_process = None
