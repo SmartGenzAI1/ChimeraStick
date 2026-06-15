@@ -309,6 +309,113 @@ class ChimeraServerTestCase(unittest.TestCase):
         data = json.loads(response.data)
         self.assertEqual(data["services"]["postgres"], "inactive")
 
+    def test_api_env_management(self):
+        # Setup CSRF token first
+        with self.app.session_transaction() as sess:
+            sess["csrf_token"] = "token123"
+
+        # 1. Unauthenticated request should fail (returns 400 because CSRF check happens first in before_request, but if we pass CSRF it returns 401)
+        response = self.app.post(
+            "/api/env",
+            data={"key": "TEST_KEY", "value": "val123", "csrf_token": "token123"},
+        )
+        self.assertEqual(response.status_code, 401)
+
+        # Authenticate
+        with self.app.session_transaction() as sess:
+            sess["authenticated"] = True
+            sess["csrf_token"] = "token123"
+
+        # 2. Add environment variable
+        response = self.app.post(
+            "/api/env",
+            json={"key": "DB_PASSWORD", "value": "secret"},
+            headers={"X-CSRF-Token": "token123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["env_vars"]["DB_PASSWORD"], "secret")
+
+        # 3. Retrieve via status API
+        response = self.app.get("/api/status")
+        status_data = json.loads(response.data)
+        self.assertEqual(status_data["env_vars"]["DB_PASSWORD"], "secret")
+
+        # 4. Attempt invalid key name
+        response = self.app.post(
+            "/api/env",
+            json={"key": "123INVALID", "value": "val"},
+            headers={"X-CSRF-Token": "token123"},
+        )
+        self.assertEqual(response.status_code, 400)
+
+        # 5. Delete environment variable
+        response = self.app.delete(
+            "/api/env",
+            json={"key": "DB_PASSWORD"},
+            headers={"X-CSRF-Token": "token123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+        self.assertNotIn("DB_PASSWORD", data["env_vars"])
+
+    def test_api_sql_query_execution(self):
+        # Authenticate
+        with self.app.session_transaction() as sess:
+            sess["authenticated"] = True
+            sess["csrf_token"] = "token123"
+
+        # 1. Deploy SQLite database
+        self.app.post("/deploy/sqlite", data={"csrf_token": "token123"})
+        files = os.listdir(self.shared_dir)
+        sqlite_files = [f for f in files if f.endswith(".sqlite")]
+        self.assertEqual(len(sqlite_files), 1)
+        db_name = sqlite_files[0]
+
+        # 2. Run query on SQLite database
+        response = self.app.post(
+            "/api/query",
+            json={
+                "db_type": "sqlite",
+                "db_name": db_name,
+                "query": "SELECT name, email FROM users;",
+            },
+            headers={"X-CSRF-Token": "token123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+        self.assertEqual(data["columns"], ["name", "email"])
+        self.assertEqual(data["rows"], [["Administrator", "admin@chimerastick.local"]])
+
+        # 3. Run query on Postgres (Mock simulation)
+        response = self.app.post(
+            "/api/query",
+            json={
+                "db_type": "postgres",
+                "query": "CREATE TABLE server_status (id INTEGER, online BOOLEAN);",
+            },
+            headers={"X-CSRF-Token": "token123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+
+        # Run select on Postgres mock
+        response = self.app.post(
+            "/api/query",
+            json={
+                "db_type": "postgres",
+                "query": "SELECT * FROM sqlite_master WHERE type='table';",
+            },
+            headers={"X-CSRF-Token": "token123"},
+        )
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.data)
+        self.assertTrue(data["success"])
+
 
 if __name__ == "__main__":
     unittest.main()

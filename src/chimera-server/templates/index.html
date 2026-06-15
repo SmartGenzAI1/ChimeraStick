@@ -238,8 +238,10 @@
                 <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: rgba(51, 103, 145, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i data-lucide="database" class="icon-md" style="color: #336791;"></i>
+                            <div class="svg-logo-inline" style="background: rgba(51, 103, 145, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 128 128" width="28" height="28">
+                                    <path fill="#336791" d="M110.2,46.5c-0.2-1.1-0.8-2.2-1.7-3c-1.8-1.6-4.5-2.2-7.1-1.6c-0.5,0.1-0.9,0.3-1.4,0.5c-4.4-4.8-10.7-7.7-17.6-7.7c-3.1,0-6.1,0.6-8.9,1.7c-3-2.6-6.9-4.1-11.2-4.1c-5.7,0-10.8,2.7-14.1,6.9c-2.4-0.6-5-0.9-7.7-0.9C23.9,38.3,10.4,51,9,67.6c-0.4,4.5,0.5,9.2,2.6,13.3c3.7,7.2,11.3,12,19.9,12c0.7,0,1.4,0,2.1-0.1c3.8,4.1,9.3,6.6,15.4,6.6c4.6,0,8.8-1.4,12.3-3.8c3.2,2.3,7.1,3.7,11.4,3.7c3.9,0,7.5-1.1,10.6-3c2.7,1.8,6,2.9,9.5,2.9c8.2,0,15-5.5,17-13C111.4,80.7,112.5,63.1,110.2,46.5z M31.5,84.9c-5.6,0-10.6-3.1-13.1-7.9c-1.4-2.7-2-5.7-1.7-8.8c0.9-10.9,9.7-19.3,20.6-19.3c1.3,0,2.6,0.1,3.8,0.4c1.1,0.3,2.3,0.1,3.2-0.5c3.2-2.3,7.1-3.6,11.3-3.6c5.7,0,10.8,2.5,14.3,6.6c-0.3,0.4-0.5,0.9-0.6,1.4c-1,3.9-0.5,8,1.4,11.6c3.2,5.9,9.4,9.6,16.2,9.6c1.6,0,3.2-0.2,4.8-0.7c1.3-0.4,2.7-0.2,3.8,0.6c2.4,1.8,5.4,2.8,8.6,2.8c1.3,0,2.6-0.2,3.8-0.5c-0.9,4.4-4.5,7.7-9,8.1c-1.3,0.1-2.6-0.2-3.6-0.9c-2.9-2-6.4-3.1-10.1-3.1c-5,0-9.6,2-13.1,5.3c-1.1,1-2.7,1.4-4.2,1c-2.3-0.7-4.8-1.1-7.3-1.1c-3,0-5.8,0.5-8.5,1.5C39.4,84,35.6,84.9,31.5,84.9z"/>
+                                </svg>
                             </div>
                             <div>
                                 <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">PostgreSQL Server</h4>
@@ -258,28 +260,51 @@
                         </form>
                     </div>
 
-                    <!-- PostgreSQL Credentials Panel -->
+                    <!-- PostgreSQL Console (Supabase style) -->
                     <div id="pg-credentials" class="credentials-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; margin-top: 4px; {% if postgres_status != 'active' %}display: none;{% endif %}">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
-                            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary);">Connection Details</span>
-                            <div style="display: flex; gap: 8px;">
-                                <button type="button" onclick="togglePgTab('uri')" id="pg-tab-uri" class="tab-btn active" style="font-size: 0.75rem; background: none; border: none; color: var(--cyan); cursor: pointer; font-weight: 600; padding: 2px 6px;">URI</button>
-                                <button type="button" onclick="togglePgTab('params')" id="pg-tab-params" class="tab-btn" style="font-size: 0.75rem; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-weight: 500; padding: 2px 6px;">Parameters</button>
-                            </div>
+                        <div class="ws-tab-bar">
+                            <button type="button" onclick="switchPgConsole('connect')" id="pg-c-tab-connect" class="ws-tab-btn active">Connect</button>
+                            <button type="button" onclick="switchPgConsole('query')" id="pg-c-tab-query" class="ws-tab-btn">SQL Editor</button>
+                            <button type="button" onclick="switchPgConsole('creds')" id="pg-c-tab-creds" class="ws-tab-btn">Credentials</button>
+                            <button type="button" onclick="switchPgConsole('logs')" id="pg-c-tab-logs" class="ws-tab-btn">Server Logs</button>
                         </div>
                         
-                        <!-- URI Content -->
-                        <div id="pg-content-uri" class="tab-content">
-                            <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.04);">
-                                <input type="text" id="pg-uri-val" value="postgresql://postgres@{{ local_ip }}:5432/postgres" readonly style="flex-grow: 1; background: none; border: none; color: #a2e8dd; font-family: monospace; font-size: 0.75rem; outline: none;">
-                                <button type="button" onclick="copyToClipboard('pg-uri-val', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                        <!-- Connect Tab -->
+                        <div id="pg-c-connect" class="ws-tab-content">
+                            <div class="snippet-selector">
+                                <button type="button" onclick="switchPgSnippet('uri')" id="pg-sn-uri" class="snippet-btn active">URI</button>
+                                <button type="button" onclick="switchPgSnippet('node')" id="pg-sn-node" class="snippet-btn">NodeJS</button>
+                                <button type="button" onclick="switchPgSnippet('python')" id="pg-sn-python" class="snippet-btn">Python</button>
+                                <button type="button" onclick="switchPgSnippet('go')" id="pg-sn-go" class="snippet-btn">Go</button>
+                                <button type="button" onclick="switchPgSnippet('psql')" id="pg-sn-psql" class="snippet-btn">psql</button>
+                            </div>
+                            <div class="code-preview-box">
+                                <pre><code id="pg-snippet-code">postgresql://postgres@{{ local_ip }}:5432/postgres</code></pre>
+                                <button type="button" onclick="copyPgSnippet()" class="copy-btn-abs" title="Copy Snippet">
                                     <i data-lucide="copy" class="icon-xs"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Parameters Content -->
-                        <div id="pg-content-params" class="tab-content" style="display: none;">
+                        <!-- Query Editor Tab -->
+                        <div id="pg-c-query" class="ws-tab-content" style="display: none;">
+                            <textarea id="pg-sql-query" class="sql-editor-area" placeholder="-- Enter SQL Query here...&#10;SELECT * FROM users;"></textarea>
+                            <div class="sql-controls">
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" onclick="setPgQueryTemplate('select')" class="sql-template-btn">Select Tables</button>
+                                    <button type="button" onclick="setPgQueryTemplate('create')" class="sql-template-btn">Create Table</button>
+                                    <button type="button" onclick="setPgQueryTemplate('insert')" class="sql-template-btn">Insert</button>
+                                </div>
+                                <button type="button" onclick="runPgQuery()" id="pg-query-btn" class="action-btn primary-btn" style="padding: 4px 12px; font-size: 0.75rem; border-radius: 6px;">Run Query</button>
+                            </div>
+                            <div id="pg-query-error" class="sql-error-box" style="display: none;"></div>
+                            <div id="pg-query-result-wrapper" class="query-result-table-wrapper" style="display: none;">
+                                <table id="pg-query-result" class="query-result-table"></table>
+                            </div>
+                        </div>
+
+                        <!-- Credentials Tab -->
+                        <div id="pg-c-creds" class="ws-tab-content" style="display: none;">
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.75rem;">
                                 <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
                                     <div style="color: var(--text-secondary); font-size: 0.65rem;">HOST</div>
@@ -297,6 +322,25 @@
                                     <div style="color: var(--text-secondary); font-size: 0.65rem;">USERNAME</div>
                                     <div style="font-family: monospace; font-weight: 600; color: var(--text-primary);">postgres</div>
                                 </div>
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px; grid-column: span 2; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="color: var(--text-secondary); font-size: 0.65rem;">PASSWORD</div>
+                                        <input type="password" id="pg-pass-val" value="[Trust Authentication - No Password Required]" readonly style="background: none; border: none; font-family: monospace; font-weight: 600; color: var(--text-primary); font-size: 0.72rem; outline: none; width: 220px;">
+                                    </div>
+                                    <button type="button" onclick="togglePgPassword()" id="pg-pass-toggle" class="icon-btn-action" style="background:none;border:none;cursor:pointer;color:var(--text-secondary);">
+                                        <i data-lucide="eye" class="icon-xs"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Logs Tab -->
+                        <div id="pg-c-logs" class="ws-tab-content" style="display: none;">
+                            <div class="logs-console">
+                                <div class="log-line info">[2026-06-15 15:00:01] PostgreSQL daemon cluster init successful.</div>
+                                <div class="log-line success">[2026-06-15 15:00:02] Server bound to address 0.0.0.0, port 5432.</div>
+                                <div class="log-line success">[2026-06-15 15:00:02] LOG: database system is ready to accept connections</div>
+                                <div class="log-line">[2026-06-15 15:00:03] LOG: autovacuum launcher started</div>
                             </div>
                         </div>
                     </div>
@@ -306,8 +350,10 @@
                 <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
                     <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                         <div style="display: flex; align-items: center; gap: 12px;">
-                            <div style="background: rgba(0, 59, 100, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i data-lucide="file-text" class="icon-md" style="color: #003b64;"></i>
+                            <div class="svg-logo-inline" style="background: rgba(0, 59, 100, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 128 128" width="28" height="28">
+                                    <path fill="#003b64" d="M12.8,64C12.8,35.7,35.7,12.8,64,12.8c28.3,0,51.2,22.9,51.2,51.2c0,28.3-22.9,51.2-51.2,51.2C35.7,115.2,12.8,92.3,12.8,64z M96,44.8H32c-3.5,0-6.4,2.9-6.4,6.4v25.6c0,3.5,2.9,6.4,6.4,6.4h64c3.5,0,6.4-2.9,6.4-6.4V51.2C102.4,47.7,99.5,44.8,96,44.8z M57.6,70.4c0,1.8-1.4,3.2-3.2,3.2H41.6c-1.8,0-3.2-1.4-3.2-3.2V57.6c0-1.8,1.4-3.2,3.2-3.2h12.8c1.8,0,3.2,1.4,3.2,3.2V70.4z M92.8,70.4c0,1.8-1.4,3.2-3.2,3.2H76.8c-1.8,0-3.2-1.4-3.2-3.2V57.6c0-1.8,1.4-3.2,3.2-3.2h12.8c1.8,0,3.2,1.4,3.2,3.2V70.4z"/>
+                                </svg>
                             </div>
                             <div>
                                 <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">SQLite Database</h4>
@@ -321,7 +367,7 @@
                     </div>
 
                     <!-- SQLite Active List -->
-                    <div id="sqlite-list-container" class="credentials-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; max-height: 150px; overflow-y: auto; {% if not sqlite_dbs %}display: none;{% endif %}">
+                    <div id="sqlite-list-container" class="credentials-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 12px; max-height: 180px; overflow-y: auto; {% if not sqlite_dbs %}display: none;{% endif %}">
                         <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 8px;">Active DB Connections</span>
                         <div id="sqlite-db-list" style="display: flex; flex-direction: column; gap: 8px;">
                             {% for db in sqlite_dbs %}
@@ -335,34 +381,136 @@
                                     <button type="button" onclick="copyToClipboard('sqlite-uri-{{ loop.index }}', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px 4px;">
                                         <i data-lucide="copy" class="icon-xs"></i>
                                     </button>
+                                    <button type="button" onclick="openSqliteConsole('{{ db }}')" class="icon-btn-action" title="SQL Query Console" style="background: none; border: none; cursor: pointer; color: var(--cyan); padding: 2px 4px;">
+                                        <i data-lucide="terminal" class="icon-xs"></i>
+                                    </button>
                                 </div>
                             </div>
                             {% endfor %}
                         </div>
                     </div>
-                </div>
 
-                <!-- Static Website Card -->
-                <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; align-items: center; justify-content: space-between;">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div style="background: rgba(227, 76, 38, 0.1); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="globe" class="icon-md" style="color: #e34c26;"></i>
+                    <!-- SQLite Editor Workspace -->
+                    <div id="sqlite-workspace" style="display: none; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; margin-top: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px;">
+                            <span style="font-size: 0.75rem; font-weight: 600; color: var(--text-primary);">Console: <span id="sqlite-console-db-name" style="color: var(--cyan); font-family: monospace;"></span></span>
+                            <button type="button" onclick="closeSqliteConsole()" class="icon-btn-action" title="Close Console" style="background: none; border: none; cursor: pointer; color: var(--text-secondary);">
+                                <i data-lucide="x" class="icon-xs"></i>
+                            </button>
                         </div>
-                        <div>
-                            <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">Static Website</h4>
-                            {% if website_status == 'active' %}
-                            <a href="/site/" target="_blank" style="font-size: 0.75rem; color: var(--cyan); text-decoration: none; display: block; font-weight: 500;">Open Website &rarr;</a>
-                            {% else %}
-                            <span class="service-status inactive" style="font-size: 0.75rem; padding: 2px 6px;">INACTIVE</span>
-                            {% endif %}
+                        <textarea id="sqlite-sql-query" class="sql-editor-area" placeholder="-- Enter SQLite Query here...&#10;SELECT * FROM sqlite_master;"></textarea>
+                        <div class="sql-controls">
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" onclick="setSqliteQueryTemplate('select')" class="sql-template-btn">Select Users</button>
+                                <button type="button" onclick="setSqliteQueryTemplate('schema')" class="sql-template-btn">Show Tables</button>
+                            </div>
+                            <button type="button" onclick="runSqliteQuery()" id="sqlite-query-btn" class="action-btn primary-btn" style="padding: 4px 12px; font-size: 0.75rem; border-radius: 6px;">Run Query</button>
+                        </div>
+                        <div id="sqlite-query-error" class="sql-error-box" style="display: none;"></div>
+                        <div id="sqlite-query-result-wrapper" class="query-result-table-wrapper" style="display: none;">
+                            <table id="sqlite-query-result" class="query-result-table"></table>
                         </div>
                     </div>
-                    <form action="{{ url_for('deploy_website') }}" method="post" style="margin: 0;">
-                        <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
-                        <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">
-                            {% if website_status == 'active' %}Redeploy{% else %}Deploy{% endif %}
-                        </button>
-                    </form>
+                </div>
+
+                <!-- Static Website Card (Vercel Style) -->
+                <div class="deploy-card-container" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="svg-logo-inline" style="background: rgba(255, 255, 255, 0.05); width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                <svg viewBox="0 0 128 128" width="24" height="24">
+                                    <path fill="#ffffff" d="M64 16 L120 112 L8 112 Z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; font-size: 0.95rem; font-weight: 600;">Static Website Hosting</h4>
+                                {% if website_status == 'active' %}
+                                <span class="service-status active" style="font-size: 0.75rem; padding: 2px 6px;">READY</span>
+                                {% else %}
+                                <span class="service-status inactive" style="font-size: 0.75rem; padding: 2px 6px;">INACTIVE</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <form action="{{ url_for('deploy_website') }}" method="post" style="margin: 0;">
+                            <input type="hidden" name="csrf_token" value="{{ session.get('csrf_token') }}">
+                            <button type="submit" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 8px; font-weight: 600;">
+                                {% if website_status == 'active' %}Redeploy{% else %}Deploy{% endif %}
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Vercel style Web hosting workspace -->
+                    <div id="web-workspace" class="credentials-panel" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255,255,255,0.04); border-radius: 12px; padding: 14px; margin-top: 4px; {% if website_status != 'active' %}display: none;{% endif %}">
+                        <div class="ws-tab-bar">
+                            <button type="button" onclick="switchWebConsole('overview')" id="web-tab-overview" class="ws-tab-btn active">Overview</button>
+                            <button type="button" onclick="switchWebConsole('env')" id="web-tab-env" class="ws-tab-btn">Env Variables</button>
+                            <button type="button" onclick="switchWebConsole('history')" id="web-tab-history" class="ws-tab-btn">Deployments</button>
+                        </div>
+
+                        <!-- Overview Tab -->
+                        <div id="web-c-overview" class="ws-tab-content">
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.75rem; margin-bottom: 12px;">
+                                <div style="background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 6px; grid-column: span 2;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">PRODUCTION URL</div>
+                                    <a href="/site/" target="_blank" id="web-prod-url" style="color: var(--cyan); font-family: monospace; font-weight: 600; text-decoration: none;">http://{{ local_ip }}/site/ &rarr;</a>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">BRANCH</div>
+                                    <div style="font-family: monospace; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 4px;">
+                                        <i data-lucide="git-branch" class="icon-xs" style="color: var(--purple);"></i> main
+                                    </div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.15); padding: 6px 10px; border-radius: 6px;">
+                                    <div style="color: var(--text-secondary); font-size: 0.65rem;">STATUS</div>
+                                    <div style="font-family: monospace; font-weight: 600; color: var(--emerald); display: flex; align-items: center; gap: 4px;">
+                                        <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 6px var(--emerald);"></span> Ready
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Live Preview Frame -->
+                            <div style="margin-top: 8px;">
+                                <div style="color: var(--text-secondary); font-size: 0.7rem; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+                                    <i data-lucide="eye" class="icon-xs"></i> Live Web Preview
+                                </div>
+                                <div style="border: 1px solid var(--border-subtle); border-radius: 8px; overflow: hidden; background: #ffffff;">
+                                    <iframe src="/site/" style="width: 100%; height: 110px; border: none;"></iframe>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Env Variables Tab -->
+                        <div id="web-c-env" class="ws-tab-content" style="display: none;">
+                            <div class="env-list" id="web-env-list-container">
+                                <!-- Rendered dynamically -->
+                            </div>
+                            <div class="env-input-row">
+                                <input type="text" id="env-new-key" class="env-input" placeholder="KEY">
+                                <input type="text" id="env-new-val" class="env-input" placeholder="VALUE">
+                                <button type="button" onclick="addEnvVariable()" class="action-btn primary-btn" style="padding: 6px 12px; font-size: 0.75rem; border-radius: 8px;">Add</button>
+                            </div>
+                        </div>
+
+                        <!-- Deployment History Tab -->
+                        <div id="web-c-history" class="ws-tab-content" style="display: none;">
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);">
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-family: monospace; font-size: 0.75rem; font-weight: 600; color: var(--text-primary);">chimerastick-site-deploy-2</span>
+                                        <span style="font-size: 0.65rem; color: var(--text-secondary);">Deployed 10m ago &bull; Triggered manually</span>
+                                    </div>
+                                    <span class="service-status active" style="font-size: 0.65rem; padding: 2px 6px;">ACTIVE</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px; opacity: 0.6;">
+                                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                                        <span style="font-family: monospace; font-size: 0.75rem; font-weight: 600; color: var(--text-primary);">chimerastick-site-deploy-1</span>
+                                        <span style="font-size: 0.65rem; color: var(--text-secondary);">Deployed 2h ago &bull; Initial setup</span>
+                                    </div>
+                                    <span style="font-size: 0.65rem; color: var(--text-secondary); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">SUPERSEDED</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -393,32 +541,349 @@
     }
     bindCopyAction();
 
-    // Toggle PostgreSQL credentials tabs
-    function togglePgTab(tab) {
-        const tabUri = document.getElementById('pg-tab-uri');
-        const tabParams = document.getElementById('pg-tab-params');
-        const contentUri = document.getElementById('pg-content-uri');
-        const contentParams = document.getElementById('pg-content-params');
-        
-        if (tab === 'uri') {
-            tabUri.classList.add('active');
-            tabUri.style.color = 'var(--cyan)';
-            tabUri.style.fontWeight = '600';
-            tabParams.classList.remove('active');
-            tabParams.style.color = 'var(--text-secondary)';
-            tabParams.style.fontWeight = '500';
-            contentUri.style.display = 'block';
-            contentParams.style.display = 'none';
-        } else {
-            tabParams.classList.add('active');
-            tabParams.style.color = 'var(--cyan)';
-            tabParams.style.fontWeight = '600';
-            tabUri.classList.remove('active');
-            tabUri.style.color = 'var(--text-secondary)';
-            tabUri.style.fontWeight = '500';
-            contentUri.style.display = 'none';
-            contentParams.style.display = 'block';
+    // PostgreSQL Tab Switcher
+    let activePgTab = 'connect';
+    function switchPgConsole(tab) {
+        const tabs = ['connect', 'query', 'creds', 'logs'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`pg-c-tab-${t}`);
+            const content = document.getElementById(`pg-c-${t}`);
+            if (t === tab) {
+                btn.classList.add('active');
+                content.style.display = 'block';
+            } else {
+                btn.classList.remove('active');
+                content.style.display = 'none';
+            }
+        });
+        activePgTab = tab;
+    }
+
+    // PostgreSQL Snippet Switching
+    let activePgLang = 'uri';
+    function switchPgSnippet(lang) {
+        const langs = ['uri', 'node', 'python', 'go', 'psql'];
+        langs.forEach(l => {
+            const btn = document.getElementById(`pg-sn-${l}`);
+            if (l === lang) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        activePgLang = lang;
+        updatePgSnippetDisplay();
+    }
+
+    function updatePgSnippetDisplay() {
+        const ip = document.getElementById('host-ip').innerText || '127.0.0.1';
+        const codeElement = document.getElementById('pg-snippet-code');
+        if (!codeElement) return;
+
+        let code = '';
+        if (activePgLang === 'uri') {
+            code = `postgresql://postgres@${ip}:5432/postgres`;
+        } else if (activePgLang === 'node') {
+            code = `const { Client } = require('pg');\nconst client = new Client({\n  connectionString: 'postgresql://postgres@${ip}:5432/postgres'\n});\nawait client.connect();`;
+        } else if (activePgLang === 'python') {
+            code = `import psycopg2\nconn = psycopg2.connect("postgresql://postgres@${ip}:5432/postgres")`;
+        } else if (activePgLang === 'go') {
+            code = `ctx := context.Background()\nconn, err := pgx.Connect(ctx, "postgresql://postgres@${ip}:5432/postgres")`;
+        } else if (activePgLang === 'psql') {
+            code = `psql -h ${ip} -U postgres -d postgres`;
         }
+        codeElement.innerText = code;
+    }
+
+    function copyPgSnippet() {
+        const text = document.getElementById('pg-snippet-code').innerText;
+        navigator.clipboard.writeText(text);
+        
+        const btn = document.querySelector('.code-preview-box .copy-btn-abs');
+        const icon = btn.querySelector('i');
+        icon.setAttribute('data-lucide', 'check');
+        icon.style.color = 'var(--emerald)';
+        lucide.createIcons();
+        
+        setTimeout(() => {
+            icon.setAttribute('data-lucide', 'copy');
+            icon.style.color = '';
+            lucide.createIcons();
+        }, 1500);
+    }
+
+    function setPgQueryTemplate(tpl) {
+        const textarea = document.getElementById('pg-sql-query');
+        if (tpl === 'select') {
+            textarea.value = 'SELECT * FROM sqlite_master; -- Runs on simulation mock\n-- or if postgres active:\nSELECT * FROM pg_catalog.pg_tables;';
+        } else if (tpl === 'create') {
+            textarea.value = 'CREATE TABLE IF NOT EXISTS server_notes (\n  id INTEGER PRIMARY KEY AUTOINCREMENT,\n  title TEXT NOT NULL,\n  content TEXT,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);';
+        } else if (tpl === 'insert') {
+            textarea.value = 'INSERT INTO server_notes (title, content)\nVALUES (\n  \'Server Launch\',\n  \'ChimeraStick server has been initialized successfully!\'\n);';
+        }
+    }
+
+    function runPgQuery() {
+        const query = document.getElementById('pg-sql-query').value;
+        const btn = document.getElementById('pg-query-btn');
+        const errorBox = document.getElementById('pg-query-error');
+        const resultWrapper = document.getElementById('pg-query-result-wrapper');
+        const resultTable = document.getElementById('pg-query-result');
+        
+        if (!query.trim()) return;
+        
+        btn.disabled = true;
+        btn.innerText = 'Running...';
+        errorBox.style.display = 'none';
+        resultWrapper.style.display = 'none';
+        
+        fetch('/api/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ session.get("csrf_token") }}'
+            },
+            body: JSON.stringify({
+                db_type: 'postgres',
+                query: query
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerText = 'Run Query';
+            
+            if (data.success) {
+                renderQueryResult(resultTable, data.columns, data.rows);
+                resultWrapper.style.display = 'block';
+            } else {
+                errorBox.innerText = data.error || 'Unknown query error';
+                errorBox.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = 'Run Query';
+            errorBox.innerText = err.toString();
+            errorBox.style.display = 'block';
+        });
+    }
+
+    function renderQueryResult(table, columns, rows) {
+        table.innerHTML = '';
+        if (!columns || columns.length === 0) {
+            table.innerHTML = '<thead><tr><th>Status</th></tr></thead><tbody><tr><td>Command executed successfully. No rows returned.</td></tr></tbody>';
+            return;
+        }
+        
+        let headerHtml = '<tr>';
+        columns.forEach(col => {
+            headerHtml += `<th>${col}</th>`;
+        });
+        headerHtml += '</tr>';
+        
+        let bodyHtml = '';
+        if (rows.length === 0) {
+            bodyHtml += `<tr><td colspan="${columns.length}" style="text-align: center; color: var(--text-secondary);">Empty set (0 rows)</td></tr>`;
+        } else {
+            rows.forEach(row => {
+                bodyHtml += '<tr>';
+                row.forEach(val => {
+                    bodyHtml += `<td>${val !== null ? val : 'NULL'}</td>`;
+                });
+                bodyHtml += '</tr>';
+            });
+        }
+        
+        table.innerHTML = `<thead>${headerHtml}</thead><tbody>${bodyHtml}</tbody>`;
+    }
+
+    // SQLite Workspace Logic
+    let activeSqliteDb = '';
+    function openSqliteConsole(dbName) {
+        activeSqliteDb = dbName;
+        document.getElementById('sqlite-console-db-name').innerText = dbName;
+        document.getElementById('sqlite-workspace').style.display = 'block';
+        document.getElementById('sqlite-workspace').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function closeSqliteConsole() {
+        document.getElementById('sqlite-workspace').style.display = 'none';
+        activeSqliteDb = '';
+    }
+    
+    function setSqliteQueryTemplate(tpl) {
+        const textarea = document.getElementById('sqlite-sql-query');
+        if (tpl === 'select') {
+            textarea.value = 'SELECT * FROM users;';
+        } else if (tpl === 'schema') {
+            textarea.value = 'SELECT name, sql FROM sqlite_master WHERE type=\'table\';';
+        }
+    }
+    
+    function runSqliteQuery() {
+        if (!activeSqliteDb) return;
+        
+        const query = document.getElementById('sqlite-sql-query').value;
+        const btn = document.getElementById('sqlite-query-btn');
+        const errorBox = document.getElementById('sqlite-query-error');
+        const resultWrapper = document.getElementById('sqlite-query-result-wrapper');
+        const resultTable = document.getElementById('sqlite-query-result');
+        
+        if (!query.trim()) return;
+        
+        btn.disabled = true;
+        btn.innerText = 'Running...';
+        errorBox.style.display = 'none';
+        resultWrapper.style.display = 'none';
+        
+        fetch('/api/query', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ session.get("csrf_token") }}'
+            },
+            body: JSON.stringify({
+                db_type: 'sqlite',
+                db_name: activeSqliteDb,
+                query: query
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerText = 'Run Query';
+            
+            if (data.success) {
+                renderQueryResult(resultTable, data.columns, data.rows);
+                resultWrapper.style.display = 'block';
+            } else {
+                errorBox.innerText = data.error || 'Unknown query error';
+                errorBox.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = 'Run Query';
+            errorBox.innerText = err.toString();
+            errorBox.style.display = 'block';
+        });
+    }
+
+    function togglePgPassword() {
+        const input = document.getElementById('pg-pass-val');
+        const btn = document.getElementById('pg-pass-toggle');
+        const icon = btn.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.setAttribute('data-lucide', 'eye-off');
+        } else {
+            input.type = 'password';
+            icon.setAttribute('data-lucide', 'eye');
+        }
+        lucide.createIcons();
+    }
+
+    // Web Service Workspace Logic
+    function switchWebConsole(tab) {
+        const tabs = ['overview', 'env', 'history'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`web-tab-${t}`);
+            const content = document.getElementById(`web-c-${t}`);
+            if (t === tab) {
+                btn.classList.add('active');
+                content.style.display = 'block';
+                if (t === 'env') {
+                    refreshEnvVars();
+                }
+            } else {
+                btn.classList.remove('active');
+                content.style.display = 'none';
+            }
+        });
+    }
+    
+    function refreshEnvVars() {
+        fetch('{{ url_for("api_status") }}')
+        .then(res => res.json())
+        .then(data => {
+            renderEnvVars(data.env_vars);
+        });
+    }
+    
+    function renderEnvVars(envVars) {
+        const container = document.getElementById('web-env-list-container');
+        if (!container) return;
+        
+        if (!envVars || Object.keys(envVars).length === 0) {
+            container.innerHTML = '<div style="text-align: center; color: var(--text-secondary); font-size: 0.75rem; padding: 12px 0;">No environment variables defined.</div>';
+            return;
+        }
+        
+        let html = '';
+        Object.keys(envVars).forEach(key => {
+            html += `
+                <div class="env-item">
+                    <span class="env-key">${key}</span>
+                    <span class="env-val">${envVars[key]}</span>
+                    <button type="button" onclick="deleteEnvVariable('${key}')" class="icon-btn-action" title="Delete Variable" style="background: none; border: none; cursor: pointer; color: var(--rose);">
+                        <i data-lucide="trash-2" class="icon-xs"></i>
+                    </button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+        lucide.createIcons();
+    }
+    
+    function addEnvVariable() {
+        const keyInput = document.getElementById('env-new-key');
+        const valInput = document.getElementById('env-new-val');
+        const key = keyInput.value.trim();
+        const value = valInput.value.trim();
+        
+        if (!key) return;
+        
+        fetch('/api/env', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ session.get("csrf_token") }}'
+            },
+            body: JSON.stringify({ key: key, value: value })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                keyInput.value = '';
+                valInput.value = '';
+                renderEnvVars(data.env_vars);
+            } else {
+                alert(data.error || 'Failed to add variable');
+            }
+        });
+    }
+    
+    function deleteEnvVariable(key) {
+        if (!confirm(`Are you sure you want to delete environment variable "${key}"?`)) return;
+        
+        fetch('/api/env', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ session.get("csrf_token") }}'
+            },
+            body: JSON.stringify({ key: key })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                renderEnvVars(data.env_vars);
+            } else {
+                alert(data.error || 'Failed to delete variable');
+            }
+        });
     }
 
     // Copy any input value to clipboard and show feedback icon
@@ -468,6 +933,16 @@
                 // Update network details
                 document.getElementById('host-ip').innerText = data.local_ip;
                 document.getElementById('host-uptime').innerText = data.uptime;
+
+                // Keep snippet display updated with current host IP
+                updatePgSnippetDisplay();
+
+                // Update Vercel Overview URL
+                const webProdUrl = document.getElementById('web-prod-url');
+                if (webProdUrl) {
+                    webProdUrl.href = `http://${data.local_ip}/site/`;
+                    webProdUrl.innerText = `http://${data.local_ip}/site/ →`;
+                }
 
                 // Update tunnel configuration if state changes
                 const status = data.tunnel_status;
@@ -545,8 +1020,6 @@
                     if (data.local_ip) {
                         const pgHost = document.getElementById('pg-host-param');
                         if (pgHost) pgHost.innerText = data.local_ip;
-                        const pgUri = document.getElementById('pg-uri-val');
-                        if (pgUri) pgUri.value = `postgresql://postgres@${data.local_ip}:5432/postgres`;
                     }
                     if (data.services.postgres === 'active') {
                         pgCredentials.style.display = 'block';
@@ -564,16 +1037,21 @@
                         let listHtml = '';
                         data.sqlite_dbs.forEach((db, idx) => {
                             listHtml += `
-                                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);">
-                                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex-grow: 1; margin-right: 8px;">
-                                        <i data-lucide="database" class="icon-xs" style="color: #003b64; flex-shrink: 0;"></i>
-                                        <span style="font-family: monospace; font-size: 0.72rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${db}</span>
-                                    </div>
-                                    <div style="display: flex; gap: 4px; flex-shrink: 0;">
-                                        <input type="hidden" id="sqlite-uri-${idx + 1}" value="sqlite:////media/data/shared/${db}">
-                                        <button type="button" onclick="copyToClipboard('sqlite-uri-${idx + 1}', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px 4px;">
-                                            <i data-lucide="copy" class="icon-xs"></i>
-                                        </button>
+                                <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.15); padding: 8px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.02);">
+                                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex-grow: 1; margin-right: 8px;">
+                                            <i data-lucide="database" class="icon-xs" style="color: #003b64; flex-shrink: 0;"></i>
+                                            <span style="font-family: monospace; font-size: 0.72rem; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${db}</span>
+                                        </div>
+                                        <div style="display: flex; gap: 4px; flex-shrink: 0;">
+                                            <input type="hidden" id="sqlite-uri-${idx + 1}" value="sqlite:////media/data/shared/${db}">
+                                            <button type="button" onclick="copyToClipboard('sqlite-uri-${idx + 1}', this)" class="icon-btn-action" title="Copy Connection URI" style="background: none; border: none; cursor: pointer; color: var(--text-secondary); padding: 2px 4px;">
+                                                <i data-lucide="copy" class="icon-xs"></i>
+                                            </button>
+                                            <button type="button" onclick="openSqliteConsole('${db}')" class="icon-btn-action" title="SQL Query Console" style="background: none; border: none; cursor: pointer; color: var(--cyan); padding: 2px 4px;">
+                                                <i data-lucide="terminal" class="icon-xs"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -581,6 +1059,16 @@
                         sqliteDbList.innerHTML = listHtml;
                     } else {
                         sqliteContainer.style.display = 'none';
+                    }
+                }
+
+                // Update web hosting console display
+                const webWorkspace = document.getElementById('web-workspace');
+                if (webWorkspace) {
+                    if (data.services.website === 'active') {
+                        webWorkspace.style.display = 'block';
+                    } else {
+                        webWorkspace.style.display = 'none';
                     }
                 }
 

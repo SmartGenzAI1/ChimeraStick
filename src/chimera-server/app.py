@@ -85,7 +85,10 @@ def load_config():
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE) as f:
-                return json.load(f)
+                cfg = json.load(f)
+                if "env_vars" not in cfg:
+                    cfg["env_vars"] = {}
+                return cfg
         except Exception as e:
             print(f"Error parsing config JSON: {e}")
     # Return empty template
@@ -94,6 +97,7 @@ def load_config():
         "tunnel_url": None,
         "secret_key": None,
         "discord_webhook": None,
+        "env_vars": {},
     }
 
 
@@ -958,6 +962,7 @@ def api_status():
         pass
     sqlite_dbs.sort(reverse=True)
 
+    cfg = load_config()
     return jsonify(
         {
             "tunnel_status": tunnel_status,
@@ -973,8 +978,156 @@ def api_status():
                 "website": website_status,
             },
             "sqlite_dbs": sqlite_dbs,
+            "env_vars": cfg.get("env_vars", {}),
         }
     )
+
+
+@app.route("/api/query", methods=["POST"])
+def api_query():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form
+
+    db_type = data.get("db_type")
+    db_name = data.get("db_name")
+    query = data.get("query")
+
+    if not query:
+        return jsonify({"error": "Query parameter is required"}), 400
+
+    columns = []
+    rows = []
+
+    try:
+        if db_type == "postgres":
+            if (
+                os.name == "nt"
+                or app.config.get("TESTING")
+                or not is_postgres_running()
+            ):
+                # Mock Postgres using a SQLite file
+                mock_db_path = os.path.join(SHARED_DIR, "postgres_mock.sqlite")
+                conn = sqlite3.connect(mock_db_path)
+                cursor = conn.cursor()
+                cursor.execute(query)
+                conn.commit()
+                if cursor.description:
+                    columns = [desc[0] for desc in cursor.description]
+                    rows = cursor.fetchall()
+                conn.close()
+            else:
+                # Real Postgres execution
+                try:
+                    import psycopg2
+
+                    conn = psycopg2.connect(
+                        host="127.0.0.1",
+                        port=5432,
+                        user="postgres",
+                        database="postgres",
+                    )
+                    conn.autocommit = True
+                    cursor = conn.cursor()
+                    cursor.execute(query)
+                    if cursor.description:
+                        columns = [desc[0] for desc in cursor.description]
+                        rows = cursor.fetchall()
+                    cursor.close()
+                    conn.close()
+                except ImportError:
+                    # Fallback to sqlite mock if psycopg2 is missing
+                    mock_db_path = os.path.join(SHARED_DIR, "postgres_mock.sqlite")
+                    conn = sqlite3.connect(mock_db_path)
+                    cursor = conn.cursor()
+                    cursor.execute(query)
+                    conn.commit()
+                    if cursor.description:
+                        columns = [desc[0] for desc in cursor.description]
+                        rows = cursor.fetchall()
+                    conn.close()
+        elif db_type == "sqlite":
+            if not db_name:
+                return jsonify({"error": "Database name is required for SQLite"}), 400
+
+            # Safe filename check
+            safe_name = os.path.basename(db_name)
+            if not safe_name.endswith(".sqlite"):
+                return jsonify({"error": "Invalid database file format"}), 400
+
+            db_path = os.path.join(SHARED_DIR, safe_name)
+            if not os.path.exists(db_path):
+                return jsonify({"error": "Database file does not exist"}), 404
+
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute(query)
+            conn.commit()
+            if cursor.description:
+                columns = [desc[0] for desc in cursor.description]
+                rows = cursor.fetchall()
+            conn.close()
+        else:
+            return jsonify({"error": "Invalid database type"}), 400
+
+        return jsonify({"columns": columns, "rows": rows, "success": True})
+
+    except Exception as e:
+        return jsonify({"error": str(e), "success": False}), 400
+
+
+@app.route("/api/env", methods=["GET", "POST", "DELETE"])
+def api_env():
+    if not session.get("authenticated"):
+        return jsonify({"error": "Unauthorized"}), 401
+
+    cfg = load_config()
+    if "env_vars" not in cfg:
+        cfg["env_vars"] = {}
+
+    if request.method == "GET":
+        return jsonify(cfg["env_vars"])
+
+    elif request.method == "POST":
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
+
+        key = data.get("key")
+        value = data.get("value")
+
+        if not key:
+            return jsonify({"error": "Key is required"}), 400
+
+        # Simple validation: key must be alphanumeric/underscore
+        import re
+
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key):
+            return jsonify({"error": "Invalid environment variable name"}), 400
+
+        cfg["env_vars"][key] = value or ""
+        save_config(cfg)
+        return jsonify({"success": True, "env_vars": cfg["env_vars"]})
+
+    elif request.method == "DELETE":
+        if request.is_json:
+            data = request.get_json()
+        else:
+            data = request.form
+
+        key = data.get("key")
+        if not key:
+            return jsonify({"error": "Key is required"}), 400
+
+        if key in cfg["env_vars"]:
+            del cfg["env_vars"][key]
+            save_config(cfg)
+        return jsonify({"success": True, "env_vars": cfg["env_vars"]})
 
 
 if __name__ == "__main__":
